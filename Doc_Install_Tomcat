@@ -1,0 +1,140 @@
+Pour configurer un serveur Apache Tomcat 9.0.84 et le faire fonctionner correctement, voici les étapes générales à suivre.
+Ces étapes couvrent l'installation et la configuration de Tomcat, ainsi que les actions nécessaires pour s'assurer qu'il fonctionne correctement avec vos applications web.
+
+sudo yum install java-11-openjdk-devel
+
+1. Télécharger Apache Tomcat 
+
+- Rendez-vous sur le site officiel de Tomcat à l'adresse suivante : Apache Tomcat (
+ 
+ https://tomcat.apache.org/download-90.cgi
+
+ wget https://downloads.apache.org/tomcat/tomcat-9/v9.0.84/bin/apache-tomcat-9.0.84.tar.gz
+
+- Téléchargez la version 9.0.84 (au moment où tu me poses la question, c'est celle que tu veux, mais il peut y en avoir d'autres avec des corrections de bugs).
+
+- Choisissez la distribution selon ton système d'exploitation (par exemple, tar.gz pour Linux/Mac, zip pour Windows).
+
+2. Extraire l'archive
+
+Une fois téléchargé, décompresse l'archive dans un répertoire de ton choix.
+
+sudo tar -xzvf apache-tomcat-9.0.84.tar.gz -C /opt/
+
+3. Vérifier la configuration de Java
+
+export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+
+export CATALINA_HOME=/opt/apache-tomcat-9.0.84
+
+source ~/.bashrc
+
+Tomcat nécessite Java pour fonctionner. Vérifie que tu as une version de JDK ou JRE compatible avec Tomcat 9.0.84. Tomcat 9 supporte Java 8 ou plus récent.
+
+Pour vérifier que Java est bien installé, tape la commande suivante dans le terminal :
+
+java -version
+
+https://www.oracle.com/java/technologies/downloads/#java11
+
+4. Configurer les variables d'environnement
+Pour éviter de devoir spécifier le chemin absolu de Java à chaque fois, configure les variables d'environnement JAVA_HOME et CATALINA_HOME.
+
+Sous Linux/macOS, tu peux ajouter dans ton fichier .bashrc ou .zshrc :
+
+ export JAVA_HOME=/path/to/your/jdk
+ export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+ export CATALINA_HOME=/opt/apache-tomcat-9.0.84
+
+
+5. Configurer Tomcat
+
+Il y a plusieurs fichiers de configuration importants dans Tomcat :
+
+server.xml : Principal fichier de configuration du serveur. C’est là que tu définis des ports, des hôtes, des applications web.
+
+web.xml : Fichier de configuration pour les applications web déployées.
+
+context.xml : Fichier pour la configuration des contextes d’applications.
+
+La plupart du temps, la configuration par défaut est suffisante pour démarrer, mais tu peux modifier server.xml si tu veux changer les ports ou configurer des hôtes virtuels.
+
+Exemple pour modifier le port HTTP par défaut (8080) :
+
+Édite le fichier server.xml situé dans le répertoire conf de Tomcat :
+
+sudo nano /opt/apache-tomcat-9.0.84/conf/server.xml
+
+Trouve cette ligne :
+
+<Connector port="8080" protocol="HTTP/1.1" ...
+
+Et change le numéro du port si nécessaire. Par exemple, pour le changer en 8081 :
+
+<Connector port="8081" protocol="HTTP/1.1" ...
+
+6. Démarrer Tomcat
+
+Pour démarrer Tomcat, tu peux utiliser les scripts inclus dans le répertoire bin de Tomcat.
+
+cd /opt/apache-tomcat-9.0.84/bin
+./startup.sh
+
+Cela va démarrer Tomcat. Si tout se passe bien, tu devrais voir des logs indiquant que Tomcat est en train de démarrer.
+
+7. Accéder à Tomcat via le navigateur
+
+Une fois Tomcat démarré, tu peux y accéder via un navigateur à l'adresse suivante :
+
+http://localhost:8080
+
+Si tu vois la page d'accueil de Tomcat, cela signifie que le serveur fonctionne correctement.
+
+8. Déployer des applications sur Tomcat
+
+Tomcat utilise des fichiers WAR (Web Application Archive) pour déployer des applications. Tu peux déployer une application en la copiant dans le répertoire webapps de Tomcat :
+
+cp /path/to/your-app.war /opt/apache-tomcat-9.0.84/webapps/
+
+Tomcat déploiera automatiquement l’application après quelques secondes. Tu peux vérifier les logs pour voir si l’application est correctement déployée.
+
+9. Configurer Tomcat en tant que service (optionnel)
+
+Si tu veux que Tomcat se lance automatiquement au démarrage du système, tu peux configurer Tomcat en tant que service. Pour cela, crée un fichier de service systemd.
+
+Créer un fichier de service pour systemd :
+
+sudo nano /etc/systemd/system/tomcat.service
+
+Ajoute le contenu suivant dans ce fichier :
+
+[Unit]
+Description=Apache Tomcat Web Application Container
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/opt/apache-tomcat-9.0.84/bin/startup.sh
+ExecStop=/opt/apache-tomcat-9.0.84/bin/shutdown.sh
+User=tomcat
+Group=tomcat
+PIDFile=/opt/apache-tomcat-9.0.84/temp/tomcat.pid
+Environment=JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+
+[Install]
+WantedBy=multi-user.target
+
+
+#Ensuite, recharge systemd et active le service :
+
+sudo systemctl daemon-reload
+sudo systemctl enable tomcat
+sudo systemctl start tomcat
+
+10. Sécuriser Tomcat
+
+Assure-toi de sécuriser ton installation, surtout si ton serveur est accessible depuis l'extérieur. Voici quelques bonnes pratiques :
+Changer les mots de passe par défaut : Dans conf/tomcat-users.xml, modifie ou supprime les comptes utilisateurs par défaut.
+Limiter l'accès au manager et à l'admin : Envisage de restreindre l'accès aux pages sensibles de Tomcat en configurant des règles dans le fichier context.xml ou via un pare-feu.
+
+
