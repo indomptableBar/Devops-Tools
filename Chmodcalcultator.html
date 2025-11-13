@@ -1,114 +1,105 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculateur de Permissions Chmod</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f4f4f9;
-        }
-        h1 {
-            color: #333;
-        }
-        .container {
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            width: 100%;
-            max-width: 600px;
-            margin: auto;
-        }
-        .input-group {
-            margin-bottom: 20px;
-        }
-        .input-group label {
-            font-weight: bold;
-            display: block;
-        }
-        .input-group input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-        .btn {
-            background-color: #007bff;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .btn:hover {
-            background-color: #0056b3;
-        }
-        .result {
-            font-size: 18px;
-            font-weight: bold;
-            margin-top: 20px;
-            text-align: center;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Linux Chmod Calculator</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .container { max-width: 600px; margin: auto; }
+    h2 { text-align: center; }
+    .permissions { display: flex; flex-wrap: wrap; }
+    .permissions div { flex: 1 1 33%; }
+    input[type="checkbox"] { margin-right: 10px; }
+    .btn { margin-top: 20px; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    .btn:hover { background-color: #0056b3; }
+    .result { text-align: center; margin-top: 20px; }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Calculateur de Permissions Chmod</h1>
-        <div class="input-group">
-            <label for="permissions">Entrez les permissions sous forme de rwx (ex : -rwxr-x---)</label>
-            <input type="text" id="permissions" placeholder="Exemple: -rwxr-x---" />
-        </div>
-        <button class="btn" onclick="calculerChmod()">Calculer</button>
-        <div class="result" id="result"></div>
+
+  <div class="container">
+    <h2>Linux Chmod Calculator</h2>
+    <div class="permissions">
+      <div>
+        <h3>Owner</h3>
+        <input type="checkbox" id="owner-read"> Read (r)<br>
+        <input type="checkbox" id="owner-write"> Write (w)<br>
+        <input type="checkbox" id="owner-execute"> Execute (x)<br>
+      </div>
+      <div>
+        <h3>Group</h3>
+        <input type="checkbox" id="group-read"> Read (r)<br>
+        <input type="checkbox" id="group-write"> Write (w)<br>
+        <input type="checkbox" id="group-execute"> Execute (x)<br>
+      </div>
+      <div>
+        <h3>Public</h3>
+        <input type="checkbox" id="public-read"> Read (r)<br>
+        <input type="checkbox" id="public-write"> Write (w)<br>
+        <input type="checkbox" id="public-execute"> Execute (x)<br>
+      </div>
     </div>
 
-    <script>
-        function calculerChmod() {
-            const permissions = document.getElementById('permissions').value.trim();
+    <button class="btn" onclick="calculatePermissions()">Calculate Permissions</button>
 
-            // Vérification de la validité du format
-            const regex = /^([drwx-]{9})$/;
-            if (!regex.test(permissions)) {
-                document.getElementById('result').innerText = "Format invalide ! Assurez-vous que les permissions sont au format rwx-rwx-rwx (ex : -rwxr-x---).";
-                return;
-            }
+    <div class="result">
+      <h3>Result</h3>
+      <p>Numeric (Octal) Value: <span id="numeric-result">-</span></p>
+      <p>Symbolic Notation: <span id="symbolic-result">-</span></p>
+    </div>
+  </div>
 
-            // Extraction des droits utilisateur, groupe, autre
-            const parts = permissions.slice(1).match(/([rwx-]{3})([rwx-]{3})([rwx-]{3})/);
-            if (!parts) {
-                document.getElementById('result').innerText = "Erreur dans le format des permissions.";
-                return;
-            }
+  <script>
+    // Permission calculation logic
+    function calculatePermissions() {
+      // Owner Permissions
+      let owner = 0;
+      if (document.getElementById("owner-read").checked) owner += 4;
+      if (document.getElementById("owner-write").checked) owner += 2;
+      if (document.getElementById("owner-execute").checked) owner += 1;
 
-            const userPermissions = parts[1];
-            const groupPermissions = parts[2];
-            const otherPermissions = parts[3];
+      // Group Permissions
+      let group = 0;
+      if (document.getElementById("group-read").checked) group += 4;
+      if (document.getElementById("group-write").checked) group += 2;
+      if (document.getElementById("group-execute").checked) group += 1;
 
-            // Calcul de la valeur numérique de chaque section
-            const userValue = calcValue(userPermissions);
-            const groupValue = calcValue(groupPermissions);
-            const otherValue = calcValue(otherPermissions);
+      // Public Permissions
+      let publicPerm = 0;
+      if (document.getElementById("public-read").checked) publicPerm += 4;
+      if (document.getElementById("public-write").checked) publicPerm += 2;
+      if (document.getElementById("public-execute").checked) publicPerm += 1;
 
-            // Calcul final
-            const chmodValue = userValue * 100 + groupValue * 10 + otherValue;
+      // Calculate Numeric Value (Octal)
+      let numeric = `${owner}${group}${publicPerm}`;
+      document.getElementById("numeric-result").textContent = numeric;
 
-            // Affichage du résultat
-            document.getElementById('result').innerText = `La valeur numérique correspondante est : ${chmodValue}`;
-        }
+      // Calculate Symbolic Notation
+      let symbolic = "";
+      symbolic += getSymbolic(owner, "u");
+      symbolic += getSymbolic(group, "g");
+      symbolic += getSymbolic(publicPerm, "o");
+      document.getElementById("symbolic-result").textContent = symbolic;
+    }
 
-        function calcValue(permissions) {
-            let value = 0;
-            if (permissions[0] === 'r') value += 4; // read
-            if (permissions[1] === 'w') value += 2; // write
-            if (permissions[2] === 'x') value += 1; // execute
-            return value;
-        }
-    </script>
+    // Helper to convert numeric permissions to symbolic
+    function getSymbolic(perm, user) {
+      let symbolic = "";
+      if (perm >= 4) {
+        symbolic += user + "r";
+        perm -= 4;
+      }
+      if (perm >= 2) {
+        symbolic += user + "w";
+        perm -= 2;
+      }
+      if (perm >= 1) {
+        symbolic += user + "x";
+      }
+      return symbolic ? symbolic : user + "-";
+    }
+  </script>
+
 </body>
 </html>
