@@ -1,0 +1,136 @@
+10. Sécuriser Tomcat
+
+Assure-toi de sécuriser ton installation, surtout si ton serveur est accessible depuis l'extérieur. Voici quelques bonnes pratiques :
+
+Changer les mots de passe par défaut : Dans conf/tomcat-users.xml, modifie ou supprime les comptes utilisateurs par défaut.
+
+Limiter l'accès au manager et à l'admin : Envisage de restreindre l'accès aux pages sensibles de Tomcat en configurant des règles dans le fichier context.xml ou via un pare-feu.
+
+Template XLDeploy pour Tomcat
+
+Définir les artefacts :
+
+Un artefact WAR (pour les applications à déployer).
+
+Un artefact de configuration pour Tomcat, si nécessaire (ex: server.xml, web.xml, etc.).
+
+Création du template dans XLDeploy :
+
+Nom du Template : TomcatDeploymentTemplate
+
+Description : Template pour le déploiement d'applications sur un serveur Tomcat.
+
+Composants à définir :
+
+TomcatInstall : un artefact pour installer Tomcat (si nécessaire).
+
+TomcatConfig : un artefact pour les configurations spécifiques à Tomcat.
+
+TomcatAppDeploy : un artefact pour déployer l'application WAR.
+
+Étapes de déploiement :
+
+Installer Tomcat : Si Tomcat n'est pas encore installé, tu peux utiliser un artefact qui installe Tomcat sur la machine cible.
+
+Configurer Tomcat : Si des configurations spécifiques sont nécessaires (comme l'ajout de users, des paramètres de serveur), tu peux les intégrer dans un artefact TomcatConfig.
+
+Déployer l'application WAR : Déployer le fichier WAR dans le répertoire approprié de Tomcat (généralement dans webapps).
+
+Exemple de script de déploiement pour Tomcat :
+
+<deployable>
+    <name>TomcatDeployment</name>
+    <deploy>
+        <!-- Installer Tomcat -->
+        <step id="installTomcat">
+            <artifact>TomcatInstall</artifact>
+            <action>deploy</action>
+        </step>
+        
+        <!-- Configurer Tomcat -->
+        <step id="configureTomcat">
+            <artifact>TomcatConfig</artifact>
+            <action>deploy</action>
+        </step>
+        
+        <!-- Déployer l'application -->
+        <step id="deployApp">
+            <artifact>TomcatAppDeploy</artifact>
+            <action>deploy</action>
+        </step>
+    </deploy>
+</deployable>
+
+
+
+Template XLDeploy pour IIS
+
+Définir les artefacts :
+
+Un artefact pour installer IIS (si nécessaire).
+
+Un artefact pour configurer IIS (ex: ajouter des sites, des applications).
+
+Un artefact pour déployer les fichiers de l'application (par exemple un fichier .zip contenant l'application).
+
+Création du template dans XLDeploy :
+
+Nom du Template : IISDeploymentTemplate
+
+Description : Template pour le déploiement d'applications sur un serveur IIS.
+
+Composants à définir :
+
+IISInstall : un artefact pour installer IIS.
+
+IISConfig : un artefact pour configurer IIS (ajouter des sites ou modifier des configurations).
+
+IISAppDeploy : un artefact pour déployer l'application (fichiers .zip ou autres).
+
+Étapes de déploiement :
+
+Installer IIS : Si IIS n'est pas encore installé, utilise un artefact pour installer IIS.
+
+Configurer IIS : Configure IIS en ajoutant des sites ou en modifiant des paramètres (port, authentification, etc.).
+
+Déployer l'application : Déploie l'application en copiant les fichiers dans le répertoire du site web IIS (par exemple C:\inetpub\wwwroot\).
+
+Exemple de script de déploiement pour IIS :
+
+<deployable>
+    <name>IISDeployment</name>
+    <deploy>
+        <!-- Installer IIS -->
+        <step id="installIIS">
+            <artifact>IISInstall</artifact>
+            <action>deploy</action>
+        </step>
+        
+        <!-- Configurer IIS -->
+        <step id="configureIIS">
+            <artifact>IISConfig</artifact>
+            <action>deploy</action>
+        </step>
+        
+        <!-- Déployer l'application -->
+        <step id="deployApp">
+            <artifact>IISAppDeploy</artifact>
+            <action>deploy</action>
+        </step>
+    </deploy>
+</deployable>
+
+Points communs pour les deux templates :
+
+Vérifications pré-déploiement : Assure-toi que la machine cible possède les prérequis nécessaires avant d'exécuter le déploiement (par exemple, Java pour Tomcat, IIS installé pour le déploiement IIS).
+
+Sécurité : Ajoute des étapes pour garantir que les configurations sensibles (comme les mots de passe) sont sécurisées.
+
+Rollback : Si possible, implémente un mécanisme de rollback pour revenir à un état stable en cas d'échec du déploiement.
+
+Conclusion
+
+Ces templates te permettront de déployer soit une application sur Tomcat soit sur IIS avec XLDeploy. Assure-toi de personnaliser les artefacts et les étapes selon les spécificités de ton environnement et de ta configuration. N'hésite pas à me donner plus de détails si tu as des configurations spécifiques ou des besoins particuliers pour le déploiement!
+
+
+
