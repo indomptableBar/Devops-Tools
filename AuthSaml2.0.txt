@@ -1,0 +1,194 @@
+Exemple une application Tomcat sur RedHat 9 à un Windows Server 2019/IIS utilisant l’authentification SAML 2.0.
+Dans ce scénario, le plus fréquent est :
+
+Tomcat = SP (Service Provider)
+
+Windows Server 2019 + ADFS = IdP (Identity Provider)
+
+IIS peut héberger ADFS ou des endpoints web nécessaires
+
+Votre application Java/Tomcat sur RedHat 9 veut authentifier les utilisateurs.
+
+Vous configurez votre application comme un Service Provider (SP) SAML.
+
+Sur Windows Server 2019, vous utilisez ADFS (Active Directory Federation Services) comme Identity Provider (IdP).
+
+Les utilisateurs sont redirigés depuis Tomcat → ADFS → retour vers Tomcat, avec un jeton SAML 2.0 signé.
+
+==== Prerequis =====
+
+Java 11+ (ou celui requis par votre appli)
+
+Tomcat 9 ou 10
+
+Un module SAML pour Java, comme :
+
+Spring Security SAML 2.0 (le plus standard)
+
+Keycloak Adapter si vous utilisez Keycloak en passerelle (optionnel)
+
+Pac4j SAML (simple et efficace)
+
+Shibboleth SP (moins courant sur Tomcat)
+
+👉 Je te conseille Spring Security SAML 2.0.
+
+====================
+
+Sur Windows Server 2019
+
+Le rôle ADFS installé
+
+Un certificat SSL sur ADFS
+
+L'accès au Metadata.xml de l’IdP :
+https://<votre-adfs>/FederationMetadata/2007-06/FederationMetadata.xml
+
+
+======================
+
+Etape 2
+
+Configurer votre application Tomcat comme Service Provider
+(A) Installer une librairie SAML dans votre application
+
+Exemple avec Spring Security SAML 2.0.
+
+Ajoutez au pom.xml :
+
+<dependency>
+    <groupId>org.springframework.security</groupId>
+    <artifactId>spring-security-saml2-service-provider</artifactId>
+</dependency>
+
+==========================
+
+(B) Créer les endpoints SAML dans votre application
+
+Typiquement :
+
+Endpoint	URL
+Metadata SP	/saml/metadata
+Login SAML	/saml/login
+ACS (Assertion Consumer Service)	/saml/acs
+Logout	/saml/logout
+
+============================
+
+Dans Spring Security :
+
+http
+    .saml2Login(withDefaults())
+    .saml2Logout(withDefaults());
+
+===========================
+
+(C) Générer le fichier metadata.xml du SP
+
+Les librairies SAML permettent de l’obtenir automatiquement via :
+
+https://<votre-application>/saml/metadata
+
+Vous devrez récupérer ce XML pour l’installer dans ADFS.
+
+===========================
+
+Configurer ADFS (Windows Server 2019) comme Identity Provider
+(A) Créer une “Relying Party Trust” (RP)
+
+Dans ADFS :
+
+Ouvrez ADFS → Relying Party Trusts
+
+Cliquez sur Add Relying Party Trust
+
+Choisissez Import from URL or file
+
+Importez le metadata du SP :
+
+URL (si accessible)
+https://<tomcat-server>/saml/metadata
+
+ou fichier XML exporté
+
+=============================
+
+(B) Configurer les endpoints dans ADFS
+
+Lors de la création, ADFS lit le metadata SP et ajoute automatiquement :
+
+ACS URL : https://<tomcat>/saml/acs
+
+EntityID du SP : souvent https://<tomcat>/saml/metadata
+
+==============================
+
+(C) Attribuer les claims (attributs)
+
+Dans ADFS, ajoutez des règles d’émission de claims :
+
+email
+
+givenName
+
+sn
+
+role (facultatif)
+
+Exemple minimal :
+
+Send LDAP Attributes as Claims
+
+LDAP attribute → Claim type
+E-Mail-Addresses → email
+SAM-Account-Name → uid
+
+==============================
+
+4. Récupérer le Metadata de l’IdP (ADFS)
+
+Dans ADFS :
+
+Accédez à :
+
+https://<adfs-server>/FederationMetadata/2007-06/FederationMetadata.xml
+
+Importez ce XML dans votre configuration Tomcat/SP.
+
+==============================
+
+5. Configurer le SP pour pointer vers ADFS
+Exemple Spring Security YAML :
+
+Code Yaml:
+
+spring:
+  security:
+    saml2:
+      relyingparty:
+        registration:
+          adfs:
+            identityprovider:
+              metadata-uri: "https://adfs.mondomaine.local/FederationMetadata/2007-06/FederationMetadata.xml"
+            relyingparty-id: "https://tomcat.mondomaine.com/saml/metadata"
+            signing:
+              credentials:
+                - private-key-location: "classpath:private.key"
+                  certificate-location: "classpath:certificate.crt"
+
+
+==============================
+
+6. Configurer HTTPS / certificats
+Sur Tomcat
+
+Placez votre certificat dans :
+
+
+
+===================================================================================
+
+
+
+
+
