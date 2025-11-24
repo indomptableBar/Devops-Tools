@@ -1,0 +1,18 @@
+[
+    {
+        "hostname": "srv-prod-db-01",
+        "ip": "192.168.1.10",
+        "env": "Production",
+        "filebeat": true,
+        "zabbix": true,
+        "xlr": true
+    },
+    {
+        "hostname": "srv-dev-01",
+        "ip": "10.0.0.5",
+        "env": "Devellopement",
+        "filebeat": false,
+        "zabbix": false,
+        "xlr": false
+    }
+]
