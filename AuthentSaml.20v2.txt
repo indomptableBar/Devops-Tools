@@ -1,0 +1,234 @@
+Exemple :Spring Security SAML 2.0 sur Tomcat (RHEL 9) pour s’authentifier contre ADFS sur Windows Server 2019.
+
+C’est aujourd’hui la manière la plus moderne (Spring Security 6 / Boot 3), car la v1 de Spring SAML est obsolète.
+
+🧩 Architecture générale
+
+Tomcat + app Spring Boot/Spring MVC → Service Provider (SP)
+
+Windows Server 2019 ADFS → Identity Provider (IdP)
+
+Auth via SAML 2.0 WebSSO
+
+✔️ 1. Prérequis
+Côté RHEL 9 / Tomcat
+
+Java 17+
+
+Spring Boot 3.x (ou Spring Security 6)
+
+Dépendances Spring Security SAML 2.0
+
+Côté Windows Server 2019
+
+Role ADFS installé
+
+Certificat SSL valide
+
+Possibilité d’ajouter une Relying Party Trust
+
+2. Dépendances Spring Security SAML 2.0 (mode SP)
+
+Dans votre build.gradle :
+
+implementation "org.springframework.boot:spring-boot-starter-security"
+implementation "org.springframework.security:spring-security-saml2-service-provider"
+
+ou pom.xml
+
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-security</artifactId>
+</dependency>
+
+<dependency>
+    <groupId>org.springframework.security</groupId>
+    <artifactId>spring-security-saml2-service-provider</artifactId>
+</dependency>
+==============================================================
+3. Génération du keystore SP (signatures)
+
+Sur RHEL 9 :
+
+keytool -genkeypair \
+  -alias saml-sp \
+  -keyalg RSA \
+  -keysize 2048 \
+  -keystore /opt/tomcat/saml/saml-keystore.jks \
+  -storepass changeit \
+  -validity 3650
+
+==========================================================
+📝 4. Configuration Spring Security (Java)
+👉 4.1. Charger la clé privée et le certificat SP
+
+@Bean
+RsaKeyConversionServicePostProcessor keyProcessor() {
+    return new RsaKeyConversionServicePostProcessor();
+}
+=========================================================
+
+4.2. Déclaration du fournisseur SAML (ADFS)
+
+Dans une classe SecurityConfig.java :
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Bean
+    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
+        http
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/").permitAll()
+                .anyRequest().authenticated()
+            )
+            .saml2Login(withDefaults())
+            .saml2Logout(withDefaults());
+
+        return http.build();
+    }
+
+    @Bean
+    RelyingPartyRegistrationRepository relyingPartyRegistrationRepository()
+            throws Exception {
+
+        RelyingPartyRegistration registration =
+                RelyingPartyRegistrations
+                        .fromMetadataLocation("https://adfs.example.com/FederationMetadata/2007-06/FederationMetadata.xml")
+                        .registrationId("adfs")
+                        .entityId("urn:myapp:sp")
+                        .signingX509Credentials(creds -> creds.add(getSigningCredential()))
+                        .assertingPartyDetails(details -> details
+                                .entityId("http://adfs.example.com/adfs/services/trust"))
+                        .build();
+
+        return new InMemoryRelyingPartyRegistrationRepository(registration);
+    }
+
+    private Saml2X509Credential getSigningCredential() throws Exception {
+        KeyStore ks = KeyStore.getInstance("JKS");
+        ks.load(new FileInputStream("/opt/tomcat/saml/saml-keystore.jks"), "changeit".toCharArray());
+
+        PrivateKey privateKey = (PrivateKey) ks.getKey("saml-sp", "changeit".toCharArray());
+        X509Certificate certificate = (X509Certificate) ks.getCertificate("saml-sp");
+
+        return new Saml2X509Credential(privateKey, certificate,
+                Saml2X509Credential.Saml2X509CredentialType.SIGNING,
+                Saml2X509Credential.Saml2X509CredentialType.DECRYPTION);
+    }
+}
+
+
+=========================================
+
+5. Configuration via application.yml (optionnel)
+
+spring:
+  security:
+    saml2:
+      relyingparty:
+        registration:
+          adfs:
+            signing:
+              credentials:
+                - private-key-location: "classpath:saml/key.pem"
+                  certificate-location: "classpath:saml/cert.crt"
+            identityprovider:
+              metadata-uri: "https://adfs.example.com/FederationMetadata/2007-06/FederationMetadata.xml"
+            entity-id: "urn:myapp:sp"
+            acs:
+              location: "https://app.example.com/login/saml2/sso/adfs"
+
+
+===========================================
+🗄️ 6. Configuration ADFS (côté Windows Server 2019)
+🎯 6.1. Importer les metadata SP
+
+Spring Security expose automatiquement les metadata SP à :
+https://app.example.com/saml2/service-provider-metadata/adfs
+
+============================================
+
+Dans ADFS :
+
+Add Relying Party Trust
+
+Import from URL
+
+Coller l’URL ci-dessus
+
+Valider
+
+🎯 6.2. Configurer les endpoints
+ACS :
+https://app.example.com/login/saml2/sso/adfs
+
+Binding POST
+
+=================================================
+🎯 6.3. Ajouter les Claim Rules
+Rule 1 : "Send LDAP attributes as claims"
+
+SAM-Account-Name → NameID
+
+E-mail → email
+
+Given-Name → given_name
+
+Surname → family_name
+
+Rule 2 : UPN → NameID (si besoin)
+
+c:[Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/windowsaccountname"]
+ => issue(Type = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier", Value = c.Value);
+
+==================================================
+
+7. Flux SAML final
+
+L’utilisateur accède à Tomcat
+
+Spring Security redirige vers ADFS (/adfs/ls/)
+
+L’utilisateur s’authentifie
+
+ADFS renvoie l’assertion SAML POST → /login/saml2/sso/adfs
+
+Spring Security valide la signature
+
+Session Spring Security ouverte
+===============================================
+
+8. Tests & debugging
+Activer les logs SAML Spring :
+
+Dans application.yml :
+
+logging:
+  level:
+    org.springframework.security.saml2: DEBUG
+    org.springframework.security.web.authentication: DEBUG
+
+==============================================
+
+Regarder Tomcat :
+
+catalina.out
+
+Regarder ADFS :
+
+Event Viewer
+
+Applications and Services → ADFS
+
+🎯 Conclusion
+
+Avec Spring Security SAML 2.0 :
+
+✔ Aucun module Tomcat externe
+✔ Intégration Spring native
+✔ Consommation automatique des metadata ADFS
+✔ Configuration propre & maintenable
+
