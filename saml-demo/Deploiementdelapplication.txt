@@ -1,0 +1,13 @@
+9. Déploiement sur Tomcat (optionnel)
+
+Construire le WAR :
+
+mvn clean package -DskipTests
+
+Copier :
+
+target/saml-demo.war → /opt/tomcat/webapps/
+
+Redémarrer Tomcat :
+
+systemctl restart tomcat

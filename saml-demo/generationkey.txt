@@ -1,0 +1,15 @@
+7. Keystore SAML
+
+Si tu veux générer une clé depuis RHEL 9 :
+
+mkdir -p /opt/tomcat/saml
+keytool -genkeypair \
+  -alias saml-sp \
+  -keyalg RSA \
+  -keysize 2048 \
+  -keystore /opt/tomcat/saml/saml-keystore.jks \
+  -storepass changeit \
+  -validity 3650
+
+
+  Copie ensuite saml-keystore.jks dans ton container Tomcat ou dans ton serveur.

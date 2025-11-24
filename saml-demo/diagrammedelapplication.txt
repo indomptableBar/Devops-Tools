@@ -1,0 +1,54 @@
+                   ┌────────────────────────────────────────┐
+                   │         Utilisateur / Navigateur        │
+                   └────────────────────────────────────────┘
+                                   │   (1) Accès /home
+                                   ▼
+                ┌──────────────────────────────────────────────┐
+                │        RHEL 9 — Tomcat 9 — Spring Boot        │
+                │        (Service Provider - SP SAML 2.0)       │
+                │                                               │
+                │   - Spring Security SAML2                     │
+                │   - Keystore SP (saml-keystore.jks)           │
+                │   - Endpoint ACS: /login/saml2/sso/adfs       │
+                │   - Metadata SP exposées                      │
+                └──────────────────────────────────────────────┘
+                                   │   (2) AuthnRequest (Redirect)
+                                   ▼
+             ┌─────────────────────────────────────────────────────────┐
+             │            Windows Server 2019 — ADFS (IdP)             │
+             │                                                         │
+             │ - FederationMetadata.xml                                │
+             │ - Token-Signing Certificate                             │
+             │ - Relying Party Trust pour Tomcat                       │
+             │ - Claim Rules (UPN, email, given_name…)                 │
+             │ - Endpoint SSO: https://adfs.example.com/adfs/ls/       │
+             └─────────────────────────────────────────────────────────┘
+                                   │   (3) Login AD / MFA / Kerberos
+                                   ▼
+             ┌─────────────────────────────────────────────────────────┐
+             │                     Contrôleur AD                       │
+             │          Active Directory Domain Services               │
+             │                                                         │
+             │ - Authentifie l’utilisateur                             │
+             │ - Renvoie les attributs à ADFS                          │
+             └─────────────────────────────────────────────────────────┘
+                                   ▲
+                                   │   (4) Issu es Claims → ADFS
+                                   │
+                                   ▼
+             ┌─────────────────────────────────────────────────────────┐
+             │          ADFS → Assertion SAML signée (HTTP POST)       │
+             └─────────────────────────────────────────────────────────┘
+                                   │    (5) Assertion SAML → SP (ACS)
+                                   ▼
+                ┌──────────────────────────────────────────────┐
+                │        Spring Boot / Security SAML2           │
+                │ - Vérification signature                      │
+                │ - Mapping des attributs                       │
+                │ - Création session Spring Security            │
+                └──────────────────────────────────────────────┘
+                                   │   (6) Affichage page /home
+                                   ▼
+                   ┌────────────────────────────────────────┐
+                   │     Page protégée : /home (SAML OK)     │
+                   └────────────────────────────────────────┘

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>SAML Demo</title>
+</head>
+<body>
+<h1>SAML Authentication Successful</h1>
+
+<p>User: <span th:text="${username}"></span></p>
+
+<h3>Attributes:</h3>
+<ul>
+    <li th:each="attr : ${attributes}">
+        <b th:text="${attr.key}"></b> :
+        <span th:text="${attr.value}"></span>
+    </li>
+</ul>
+
+<a href="/logout">Logout</a>
+</body>
+</html>

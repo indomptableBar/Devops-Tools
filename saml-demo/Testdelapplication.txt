@@ -1,0 +1,16 @@
+8. Tester
+
+Démarrer l’app :
+
+mvn clean package
+java -jar target/saml-demo-1.0.0.jar
+
+Aller sur :
+
+http://localhost:8080/home
+
+Tu es redirigé vers ADFS :
+
+https://adfs.example.com/adfs/ls/IDPInitiatedSignon.aspx
+
+Authentification OK → retourne /home.
